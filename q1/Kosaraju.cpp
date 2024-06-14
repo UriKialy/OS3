@@ -1,8 +1,9 @@
 #include "Kosaraju.hpp"
 #include <iostream>
-#include <vector>
+#include <list>
 #include <algorithm>
 #include <functional>
+#include <vector>
 
 using namespace std;
 
@@ -18,7 +19,8 @@ void Kosaraju() {
         return;
     }
 
-    vector<vector<int>> adj(n), adjT(n);
+    // Use list instead of vector for adjacency lists
+    vector<list<int>> adj(n), adjT(n);
     cout << "Enter " << m << " edges: " << endl;
 
     int u, v;
@@ -30,7 +32,7 @@ void Kosaraju() {
         } else {
             adj[u].push_back(v);
             adjT[v].push_back(u);
-            cout<< "Edge " << u<<" "<< v<< " added." << endl;
+            cout << "Edge " << u << " " << v << " added." << endl;
         }
     }
 
@@ -55,7 +57,7 @@ void Kosaraju() {
 
     reverse(order.begin(), order.end());
     vector<int> component(n, -1);
-    vector<vector<int>> components; // To store the nodes of each component
+    vector<list<int>> components; // To store the nodes of each component
 
     function<void(int, int)> dfs2 = [&](int u, int comp) {
         component[u] = comp;
@@ -70,7 +72,7 @@ void Kosaraju() {
     int comp = 0;
     for (int u : order) {
         if (component[u] == -1) {
-            components.push_back(vector<int>()); // Add a new component
+            components.push_back(list<int>()); // Add a new component
             dfs2(u, comp++);
         }
     }
