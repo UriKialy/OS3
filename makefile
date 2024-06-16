@@ -1,26 +1,37 @@
-# This Makefile is used to build and clean multiple subdirectories.
-# It provides targets for building all subdirectories, cleaning all subdirectories,
-# and running programs in the "q1" subdirectory.
+# Makefile for graph_server
 
-SUBDIRS := $(wildcard */)
+# Compiler
+CXX = g++
 
-.PHONY: all $(SUBDIRS)
+# Compiler flags
+CXXFLAGS = -pthread -std=c++11 -Wall -Wextra
 
-# Target to build all subdirectories
-all: $(SUBDIRS)
+# Target executable
+TARGET = graph_server
 
-$(SUBDIRS):
-	$(MAKE) -C $@
+# Source files
+SRCS = graph_server.cpp
 
-.PHONY: clean
+# Object files
+OBJS = $(SRCS:.cpp=.o)
 
-# Target to clean all subdirectories
+# Default target
+all: $(TARGET)
+
+# Link the target executable
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
+
+# Compile the source files into object files
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Clean up build files
 clean:
-	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir clean; \
-	done
+	rm -f $(TARGET) $(OBJS)
 
-# Target to run programs in the "q1" subdirectory
-run-q1:
-	@echo "Running programs in directory q1"
-	@$(MAKE) -C q1/
+# Run the server
+run: $(TARGET)
+	./$(TARGET)
+
+.PHONY: all clean run
