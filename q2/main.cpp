@@ -7,6 +7,8 @@
 int main() {
         //KosarajuList();
         Kosarajudeque();
+         KosarajuMix() ;
+         KosarajuVector();
         
     return 0;
 }

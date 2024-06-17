@@ -9,3 +9,4 @@
 void KosarajuList();
 void Kosarajudeque();
 void KosarajuMix() ;
+void KosarajuVector();
