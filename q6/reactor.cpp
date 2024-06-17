@@ -51,6 +51,25 @@ void *reactor::startReactor()
         }
     }
 }
+/*    void* reactor::fdhandler(int fd){
+        char buffer[1024];
+        ssize_t n = read(fd, buffer, sizeof(buffer)); // Read data from the fd into buffer
+        if (n > 0)
+        {
+            std::cout << "Received " << n << " bytes from client on fd " << fd << ": " << std::string(buffer, n) << std::endl;
+            addFdToReactor(this,fd,handlers[fd]);
+        }
+        else if (n == 0)
+        {
+            std::cout << "Client closed connection on fd " << fd << std::endl;
+            removeFdFromReactor(this, fd); // Remove the fd from the reactor
+        }
+        else
+        {
+            perror("read"); // Print error if read fails
+        }
+        return nullptr; // Return nullptr (not used in this example)
+    }*/
 
 int reactor::stopReactor(void *reactor)
 {

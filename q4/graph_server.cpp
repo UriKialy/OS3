@@ -1,17 +1,4 @@
-#include <iostream>
-#include <vector>
-#include <list>
-#include <functional>
-#include <algorithm>
-#include <string>
-#include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <pthread.h>
-#include <sstream>
+#include "graph_server.hpp"
 
 using namespace std;
 
@@ -22,7 +9,6 @@ int n = 0, m = 0; // Number of vertices and edges
 vector<list<int>> adj; // Adjacency list for the graph
 vector<list<int>> adjT; // Transpose adjacency list for Kosaraju's algorithm
 
-void *handle_client(void *arg);
 
 // Function to initialize a new graph
 void Newgraph(int numVertices, int numEdges) {
