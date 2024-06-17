@@ -7,6 +7,7 @@
 int main() {
         //KosarajuList();
         Kosarajudeque();
+        
     return 0;
 }
 

@@ -8,3 +8,4 @@
 #include <algorithm>
 void KosarajuList();
 void Kosarajudeque();
+void KosarajuMix() ;

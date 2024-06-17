@@ -15,7 +15,7 @@ void Kosarajudeque() {
     }
 
     // Use deque instead of vector for adjacency lists
-    vector<deque<int>> adj(n), adjT(n);
+    deque<deque<int>> adj(n), adjT(n);
     cout << "Enter " << m << " edges: " << endl;
 
     int u, v;
@@ -31,7 +31,7 @@ void Kosarajudeque() {
         }
     }
 
-    vector<bool> visited(n, false);
+    deque<bool> visited(n, false);
     deque<int> order;
 
     function<void(int)> dfs1 = [&](int u) {
@@ -51,8 +51,8 @@ void Kosarajudeque() {
     }
 
     reverse(order.begin(), order.end());
-    vector<int> component(n, -1);
-    vector<deque<int>> components; // To store the nodes of each component
+    deque<int> component(n, -1);
+    deque<deque<int>> components; // To store the nodes of each component
 
     function<void(int, int)> dfs2 = [&](int u, int comp) {
         component[u] = comp;

@@ -2,7 +2,7 @@
 using namespace std;
 
 void KosarajuList() {
-    int n, m;
+      int n, m;
     cout << "Enter the number of vertices: ";
     cin >> n;
     cout << "Enter the number of edges: ";
@@ -14,7 +14,7 @@ void KosarajuList() {
     }
 
     // Use list instead of vector for adjacency lists
-    vector<list<int>> adj(n), adjT(n);
+    list<list<int>> adj(n), adjT(n);
     cout << "Enter " << m << " edges: " << endl;
 
     int u, v;
@@ -24,19 +24,24 @@ void KosarajuList() {
             cout << "Invalid input. There are only " << n << " vertices. Try again." << endl;
             --i;
         } else {
-            adj[u].push_back(v);
-            adjT[v].push_back(u);
+            auto it = next(adj.begin(), u);
+            it->push_back(v);
+            it = next(adjT.begin(), v);
+            it->push_back(u);
             cout << "Edge " << u << " " << v << " added." << endl;
         }
     }
 
-    vector<bool> visited(n, false);
+    list<bool> visited(n, false);
     list<int> order;
 
     function<void(int)> dfs1 = [&](int u) {
-        visited[u] = true;
-        for (int v : adj[u]) {
-            if (!visited[v]) {
+        auto itVisited = next(visited.begin(), u);
+        *itVisited = true;
+        auto itAdj = next(adj.begin(), u);
+        for (int v : *itAdj) {
+            auto itVVisited = next(visited.begin(), v);
+            if (!*itVVisited) {
                 dfs1(v);
             }
         }
@@ -44,20 +49,24 @@ void KosarajuList() {
     };
 
     for (int i = 0; i < n; ++i) {
-        if (!visited[i]) {
+        auto itVisited = next(visited.begin(), i);
+        if (!*itVisited) {
             dfs1(i);
         }
     }
 
-    reverse(order.begin(), order.end());
-    vector<int> component(n, -1);
-    vector<list<int>> components; // To store the nodes of each component
+    order.reverse(); // Reverse the order directly using list's reverse method
+    list<int> component(n, -1);
+    list<list<int>> components; // To store the nodes of each component
 
-    function<void(int, int)> dfs2 = [&](int u, int comp) {
-        component[u] = comp;
-        components[comp].push_back(u);
-        for (int v : adjT[u]) {
-            if (component[v] == -1) {
+    function<void(int, list<int>&)> dfs2 = [&](int u, list<int>& comp) {
+        auto itComponent = next(component.begin(), u);
+        *itComponent = comp.size();
+        comp.push_back(u);
+        auto itAdjT = next(adjT.begin(), u);
+        for (int v : *itAdjT) {
+            auto itVComponent = next(component.begin(), v);
+            if (*itVComponent == -1) {
                 dfs2(v, comp);
             }
         }
@@ -65,16 +74,19 @@ void KosarajuList() {
 
     int comp = 0;
     for (int u : order) {
-        if (component[u] == -1) {
-            components.push_back(list<int>()); // Add a new component
-            dfs2(u, comp++);
+        auto itComponent = next(component.begin(), u);
+        if (*itComponent == -1) {
+            components.emplace_back(); // Add a new component
+            dfs2(u, components.back());
+            ++comp;
         }
     }
 
     cout << "Number of strongly connected components: " << comp << endl;
-    for (int i = 0; i < comp; ++i) {
-        cout << "Component " << i + 1 << ": ";
-        for (int node : components[i]) {
+    int idx = 1;
+    for (const auto& comp : components) {
+        cout << "Component " << idx++ << ": ";
+        for (int node : comp) {
             cout << node << " ";
         }
         cout << endl;
