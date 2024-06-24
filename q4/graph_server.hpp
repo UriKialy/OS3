@@ -13,6 +13,9 @@
 #include <pthread.h>
 #include <sstream>
 
+#define PORT 9034   // Port we're listening on
+
+
 void *handle_client(void *arg);
 
 void Kosaraju(int client_fd);

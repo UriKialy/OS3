@@ -1,31 +1,29 @@
-#include <iostream>
-#include <vector>
-#include <list>
-#include <functional>
-#include <algorithm>
-#include <string>
-#include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <pthread.h>
-#include <sstream>
-#include <unordered_map>
+// reactor.hpp
 
-class reactor
-{
-    typedef void *(*reactorFunc)(int fd);
-    bool running = false;
-    typedef reactor;
-    std::unordered_map<int, reactorFunc> handlers; // Map of file descriptors to their handler functions
-    // starts new reactor and returns pointer to it
-    void *startReactor();
-    // adds fd to Reactor (for reading) ; returns 0 on success.
-    int addFdToReactor(void *reactor, int fd, reactorFunc func);
-    // removes fd from reactor
-    int removeFdFromReactor(void *reactor, int fd);
-    // stops reactor
-    int stopReactor(void *reactor);
+#pragma once
+
+#include <functional>
+#include <unordered_map>
+#include <sys/epoll.h>
+#include <unistd.h>
+#include <iostream>
+
+using ReactorFunc = std::function<void(int)>;
+
+class Reactor {
+public:
+    Reactor();
+    ~Reactor();
+
+    void addFd(int fd, ReactorFunc func);
+    void removeFd(int fd);
+    void run();
+    void stop();
+
+private:
+    int epoll_fd;
+    bool running;
+    std::unordered_map<int, ReactorFunc> handlers;
 };
+
+

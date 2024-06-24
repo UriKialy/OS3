@@ -1,84 +1,63 @@
-#include "reactor.hpp"
+// reactor.cpp
 
+#include "reactor.hpp"
 using namespace std;
 
-void *reactor::startReactor()
-{
+Reactor::Reactor() : running(false) {
+    epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        perror("epoll_create1");
+        exit(EXIT_FAILURE);
+    }
+}
+
+Reactor::~Reactor() {
+    close(epoll_fd);
+}
+
+void Reactor::addFd(int fd, ReactorFunc func) {
+    struct epoll_event event;
+    event.data.fd = fd;
+    event.events = EPOLLIN;
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
+        perror("epoll_ctl: add");
+        exit(EXIT_FAILURE);
+    }
+
+    handlers[fd] = func;
+}
+
+void Reactor::removeFd(int fd) {
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr) == -1) {
+        perror("epoll_ctl: remove");
+        exit(EXIT_FAILURE);
+    }
+
+    handlers.erase(fd);
+}
+
+void Reactor::run() {
     running = true;
-    while (running)
-    {
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        int maxfd = -1;
-        for (const auto &handler : handlers)
-        {
-            int fd = handler.first;
-            FD_SET(fd, &readfds); // Add fd to the set of file descriptors to monitor
-            if (fd > maxfd)
-            {
-                maxfd = fd; // Track the highest fd number for select
-            }
+    const int MAX_EVENTS = 100;
+    struct epoll_event events[MAX_EVENTS];
+
+    while (running) {
+        int num_fds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+        if (num_fds == -1) {
+            perror("epoll_wait");
+            exit(EXIT_FAILURE);
         }
 
-        if (maxfd == -1)
-        {
-            continue; // no file descriptors to monitor continue to the next one
-        }
-        struct timeval timeout = {3, 0}; // Timeout of 1 second
-        int result = select(maxfd + 1, &readfds, nullptr, nullptr, &timeout);
-        if (result == -1)
-        {
-            perror("select");   // Print error if select fails
-            exit(EXIT_FAILURE); // Exit program on select error
-        }
-        else if (result == 0)
-        {
-            // Timeout occurred, continue to check for events
-            continue;
-        }
-
-        // Check each file descriptor for activity
-        for (int fd = 0; fd <= maxfd; ++fd)
-        {
-            if (FD_ISSET(fd, &readfds))
-            {
-                // If fd is set in the read_fds set, call its handler function
-                if (handlers.find(fd) != handlers.end())
-                {
-                    handlers[fd](fd); // Call the handler function for the fd
-                }
+        for (int i = 0; i < num_fds; ++i) {
+            int fd = events[i].data.fd;
+            if (handlers.find(fd) != handlers.end()) {
+                handlers[fd](fd);
             }
         }
     }
 }
 
-int reactor::stopReactor(void *reactor)
-{
+void Reactor::stop() {
     running = false;
-}
-
-int reactor::addFdToReactor(void *reactor, int fd, reactorFunc func)
-{
-    if (running == false)
-    {
-        return -1;
-    }
-    else
-    {
-        handlers[fd] = func;
-        return 0;
-    }
-}
-
-int reactor::removeFdFromReactor(void *reactor, int fd)
-{
-    if (running == false)
-    {
-        return -1;
-    }
-    else
-    {
-        handlers.erase(fd);
-        return 0;
-    }
 }

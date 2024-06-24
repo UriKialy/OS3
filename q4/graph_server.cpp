@@ -2,7 +2,6 @@
 
 using namespace std;
 
-#define PORT 9034   // Port we're listening on
 
 // Define global variables for graph representation
 int n = 0, m = 0; // Number of vertices and edges
@@ -106,7 +105,7 @@ int main() {
     struct sockaddr_in serveraddr;    // server address
     struct sockaddr_in clientaddr;    // client address
     socklen_t addrlen;
-    char buf[1024];    // Buffer for client data
+    //char buf[1024];    // Buffer for client data
 
     // Create a new listener socket
     if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
