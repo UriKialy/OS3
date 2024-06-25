@@ -1,52 +1,53 @@
 #include "graph_server.hpp"
+#include "proactor.hpp"
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <list>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <algorithm>
+#include <functional>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 using namespace std;
 
-std::mutex graph_mutex;
+// Define global variables for graph representation
+int n = 0, m = 0; // Number of vertices and edges
+vector<list<int>> adj; // Adjacency list for the graph
+vector<list<int>> adjT; // Transpose adjacency list for Kosaraju's algorithm
+bool is_half_of_nodes = false;
+bool prev_half_of_nodes = false;
 
-// Global variables for graph representation
-int n = 0, m = 0;
-vector<list<int>> adj;
-vector<list<int>> adjT;
+// Mutex and condition variable for thread-safe operations and synchronization
+mutex graph_mutex;
+condition_variable cv;
 
 // Function to initialize a new graph
 void Newgraph(int numVertices, int numEdges) {
-    n = numVertices;
-    m = numEdges;
+    //lock_guard<mutex> lock(graph_mutex);
+  
 
-    adj.clear();
-    adj.resize(n);
-    adjT.clear();
-    adjT.resize(n);
+        n = numVertices;
+        m = numEdges;
 
-    cout << "New graph created with " << numVertices << " vertices and " << numEdges << " edges." << endl;
-}
-
-// Function to add a new edge
-void Newedge(int u, int v) {
-    adj[u].push_back(v);
-    adjT[v].push_back(u);
-    cout << "Edge added: " << u << " -> " << v << endl;
-}
-
-// Function to remove an edge
-void Removeedge(int u, int v) {
-    auto it = find(adj[u].begin(), adj[u].end(), v);
-    if (it != adj[u].end()) {
-        adj[u].erase(it);
-        cout << "Edge removed: " << u << " -> " << v << endl;
-    }
-
-    it = find(adjT[v].begin(), adjT[v].end(), u);
-    if (it != adjT[v].end()) {
-        adjT[v].erase(it);
-    }
+        adj.clear();
+        adj.resize(n);
+        adjT.clear();
+        adjT.resize(n);
+    
 }
 
 // Kosaraju's algorithm function
 void Kosaraju(int client_fd) {
+    //lock_guard<mutex> lock(graph_mutex);
     if (n <= 0 || m <= 0 || m > 2 * n) {
-        std::string msg = "Invalid input\n";
+        string msg = "Invalid input\n";
         send(client_fd, msg.c_str(), msg.size(), 0);
         return;
     }
@@ -70,7 +71,7 @@ void Kosaraju(int client_fd) {
         }
     }
 
-    order.reverse();
+    reverse(order.begin(), order.end());
     vector<int> component(n, -1);
     vector<list<int>> components; // To store the nodes of each component
 
@@ -101,99 +102,127 @@ void Kosaraju(int client_fd) {
         result += "\n";
     }
 
+    // Check if any component has at least 50% of the nodes
+    prev_half_of_nodes = is_half_of_nodes;
+    is_half_of_nodes = false;
+    for (const auto& c : components) {
+        if (c.size() >= n / 2) {
+            is_half_of_nodes = true;
+            break;
+        }
+    }
+
+    // Notify the monitor thread
+    cv.notify_one();
+
     send(client_fd, result.c_str(), result.size(), 0);
-    cout << "Kosaraju's algorithm executed. Result sent to client." << endl;
 }
 
-void* handle_client(void* arg) {
-    int client_fd = (intptr_t)arg;
+// Function to add a new edge
+void Newedge(int u, int v) {
+    //lock_guard<mutex> lock(graph_mutex);
+    adj[u].push_back(v);
+    adjT[v].push_back(u);
+}
+
+// Function to remove an edge
+void Removeedge(int u, int v) {
+    //lock_guard<mutex> lock(graph_mutex);
+    auto it = find(adj[u].begin(), adj[u].end(), v);
+    if (it != adj[u].end()) {
+        adj[u].erase(it);
+    }
+
+    it = find(adjT[v].begin(), adjT[v].end(), u);
+    if (it != adjT[v].end()) {
+        adjT[v].erase(it);
+    }
+}
+
+// Monitor thread function
+void monitor_scc() {
+    unique_lock<mutex> lock(graph_mutex);
+    while (true) {
+        cv.wait(lock, [] { return is_half_of_nodes != prev_half_of_nodes; });
+        if (is_half_of_nodes) {
+            cout << "At least 50% of the graph belongs to the same SCC\n";
+        } else {
+            cout << "At least 50% of the graph no longer belongs to the same SCC\n";
+        }
+        prev_half_of_nodes = is_half_of_nodes;
+    }
+}
+
+void* handle_client_proactor(int client_fd) {
     char buf[1024];
     int numbytes;
-    std::string msg; // Declare the string variable once here
 
     while ((numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0)) > 0) {
         buf[numbytes] = '\0';
-        std::string command(buf);
-        std::stringstream ss(command);
-        std::string cmd;
+        string command(buf);
+        stringstream ss(command);
+        string cmd;
         ss >> cmd;
 
+        string msg;
         if (cmd == "Newgraph") {
-            int numVertices, numEdges;
-            ss >> numVertices >> numEdges;
-
-            {
-                std::lock_guard<std::mutex> lock(graph_mutex);
+                lock_guard<mutex> lock(graph_mutex);
+                int numVertices, numEdges;
+                ss >> numVertices >> numEdges;
                 Newgraph(numVertices, numEdges);
 
                 // Inform the client to send the edges
-                msg = "Enter " + std::to_string(numEdges) + " edges:\n";
+                msg = "Enter " + to_string(numEdges) + " edges:\n";
                 send(client_fd, msg.c_str(), msg.size(), 0);
 
                 for (int i = 0; i < numEdges; ++i) {
-                    numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0);
-                    if (numbytes <= 0) {
-                        if (numbytes == 0) {
-                            cout << "Socket " << client_fd << " hung up" << endl;
-                        } else {
-                            perror("recv");
-                        }
-                        close(client_fd);
-                        return NULL;
+                    if ((numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0)) > 0) {
+                        buf[numbytes] = '\0';
+                        stringstream edge_ss(buf);
+                        int u, v;
+                        edge_ss >> u >> v;
+                        Newedge(u, v);
                     }
-                    buf[numbytes] = '\0';
-                    std::stringstream edge_ss(buf);
-                    int u, v;
-                    edge_ss >> u >> v;
-                    Newedge(u, v);
                 }
 
-                msg = "Graph created with " + std::to_string(numVertices) + " vertices and " + std::to_string(numEdges) + " edges.\n";
+                msg = "Graph created with " + to_string(numVertices) + " vertices and " + to_string(numEdges) + " edges.\n";
                 send(client_fd, msg.c_str(), msg.size(), 0);
-            }
+       
         } else if (cmd == "Kosaraju") {
-            std::lock_guard<std::mutex> lock(graph_mutex);
+    lock_guard<mutex> lock(graph_mutex);
             Kosaraju(client_fd);
         } else if (cmd == "Newedge") {
+                lock_guard<mutex> lock(graph_mutex);
             int u, v;
             ss >> u >> v;
-            {
-                std::lock_guard<std::mutex> lock(graph_mutex);
-                Newedge(u, v);
-                msg = "Edge " + std::to_string(u) + " -> " + std::to_string(v) + " added.\n";
-                send(client_fd, msg.c_str(), msg.size(), 0);
-            }
+            Newedge(u, v);
+            msg = "Edge " + to_string(u) + " " + to_string(v) + " added.\n";
+            send(client_fd, msg.c_str(), msg.size(), 0);
         } else if (cmd == "Removeedge") {
+                lock_guard<mutex> lock(graph_mutex);
             int u, v;
             ss >> u >> v;
-            {
-                std::lock_guard<std::mutex> lock(graph_mutex);
-                Removeedge(u, v);
-                msg = "Edge " + std::to_string(u) + " -> " + std::to_string(v) + " removed.\n";
-                send(client_fd, msg.c_str(), msg.size(), 0);
-            }
+            Removeedge(u, v);
+            msg = "Edge " + to_string(u) + " " + to_string(v) + " removed.\n";
+            send(client_fd, msg.c_str(), msg.size(), 0);
         } else {
             msg = "Invalid command\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
         }
     }
 
-    if (numbytes == 0) {
-        cout << "Socket " << client_fd << " hung up" << endl;
-    } else {
-        perror("recv");
-    }
-
     close(client_fd);
-    return NULL;
+    return nullptr;
 }
+
+
+
 
 int main() {
     int listener;     // Listening socket descriptor
     struct sockaddr_in serveraddr;    // server address
     struct sockaddr_in clientaddr;    // client address
     socklen_t addrlen;
-    const int PORT = 9034;
 
     // Create a new listener socket
     if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -228,6 +257,10 @@ int main() {
 
     printf("Server is running on port %d\n", PORT);
 
+    // Start the monitor thread
+    thread monitor_thread(monitor_scc);
+    monitor_thread.detach();
+
     while (true) {
         addrlen = sizeof(clientaddr);
         int newfd = accept(listener, (struct sockaddr *)&clientaddr, &addrlen);
@@ -239,14 +272,13 @@ int main() {
 
         printf("New connection from %s on socket %d\n", inet_ntoa(clientaddr.sin_addr), newfd);
 
-        pthread_t client_thread;
-        if (pthread_create(&client_thread, NULL, handle_client, (void *)(intptr_t)newfd) != 0) {
-            perror("pthread_create");
+        pthread_t client_thread = startProactor(newfd, handle_client_proactor);
+        if (client_thread == 0) {
+            perror("startProactor");
             close(newfd);
-        } else {
-            pthread_detach(client_thread); // Detach the thread to handle its own cleanup
         }
     }
 
     return 0;
 }
+

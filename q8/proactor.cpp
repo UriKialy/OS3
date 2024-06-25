@@ -1,9 +1,9 @@
-// reactor.cpp
+// proactor.cpp
 
-#include "reactor.hpp"
+#include "proactor.hpp"
 using namespace std;
 
-Reactor::Reactor() : running(false) {
+proactor::proactor() : running(false) {
     epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
         perror("epoll_create1");
@@ -11,11 +11,11 @@ Reactor::Reactor() : running(false) {
     }
 }
 
-Reactor::~Reactor() {
+proactor::~proactor() {
     close(epoll_fd);
 }
 
-void Reactor::addFd(int fd, ReactorFunc func) {
+void proactor::addFd(int fd, proactorFunc func) {
     struct epoll_event event;
     event.data.fd = fd;
     event.events = EPOLLIN;
@@ -28,7 +28,7 @@ void Reactor::addFd(int fd, ReactorFunc func) {
     handlers[fd] = func;
 }
 
-void Reactor::removeFd(int fd) {
+void proactor::removeFd(int fd) {
     if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr) == -1) {
         perror("epoll_ctl: remove");
         exit(EXIT_FAILURE);
@@ -37,7 +37,7 @@ void Reactor::removeFd(int fd) {
     handlers.erase(fd);
 }
 
-void Reactor::run() {
+void proactor::run() {
     running = true;
     const int MAX_EVENTS = 100;
     struct epoll_event events[MAX_EVENTS];
@@ -58,7 +58,7 @@ void Reactor::run() {
     }
 }
 
-void Reactor::stop() {
+void proactor::stop() {
     running = false;
 }
 
@@ -66,7 +66,7 @@ void Reactor::stop() {
 
 struct ProactorData {
     int sockfd;
-    ProactorFunc threadFunc;
+     ProactorFunc threadFunc;
 };
 
 void* proactorThread(void* arg) {

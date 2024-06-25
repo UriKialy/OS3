@@ -14,7 +14,7 @@
 #include <pthread.h>
 #include "proactor.hpp"
 
-#define PORT 9033 // The port users will be connecting to
+#define PORT 9034 // The port users will be connecting to
 
 // Function declarations
 void Newgraph(int numVertices, int numEdges);

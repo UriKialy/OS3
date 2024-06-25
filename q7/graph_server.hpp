@@ -1,27 +1,24 @@
+#pragma once
+
 #include <iostream>
 #include <vector>
 #include <list>
 #include <functional>
 #include <algorithm>
-#include <string>
-#include <cstring>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <pthread.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
 #include <sstream>
-#pragma once
-#define PORT 9034   // Port we're listening on
+#include <pthread.h>
+#include <mutex>
 
-
-void *handle_client(void *arg);
-
-void Kosaraju(int client_fd);
-
-void Newedge(int u, int v);
-
-void Removeedge(int u, int v);
-
+// Function declarations
 void Newgraph(int numVertices, int numEdges);
+void Newedge(int u, int v);
+void Removeedge(int u, int v);
+void Kosaraju(int client_fd);
+void* handle_client(void* arg);
+
+extern std::mutex graph_mutex;
+
