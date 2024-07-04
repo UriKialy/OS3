@@ -118,7 +118,7 @@ void handle_client(int client_fd) {
     string command;
     stringstream ss;
 
-    while ((numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0)) > 0) {
+    while ((numbytes = recv(client_fd, buf, sizeof(buf) - 1, 0)) > 0 ) {
         buf[numbytes] = '\0';
         command.append(buf);
         ss.clear();
@@ -158,6 +158,7 @@ void handle_client(int client_fd) {
         } else if (cmd == "Kosaraju") {
             Kosaraju(client_fd);
             break;
+
         } else if (cmd == "Newedge") {
             int u, v;
             ss >> u >> v;
@@ -172,7 +173,13 @@ void handle_client(int client_fd) {
             string msg = "Edge " + to_string(u) + " " + to_string(v) + " removed.\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
             break;
-        } else {
+        }
+         else if (cmd == "Exit") {
+            close(client_fd);
+            cout<<"closing client:"<<client_fd<<endl;
+            break;
+        }
+        else {
             string msg = "Invalid command\n";
             cout<<msg<<"from user:"<<client_fd <<endl;
             send(client_fd, msg.c_str(), msg.size(), 0);
@@ -180,10 +187,8 @@ void handle_client(int client_fd) {
 
         command.clear(); // Clear the command buffer
     }
-    //cout<<"closing client:"<<client_fd<<endl;
-    //close(client_fd);
-}
 
+}
 
 int main() {
     int listener;     // Listening socket descriptor

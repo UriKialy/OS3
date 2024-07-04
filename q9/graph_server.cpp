@@ -205,6 +205,13 @@ void *handle_client_proactor(int client_fd)
             msg = "Edge " + to_string(u) + " " + to_string(v) + " removed.\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
         }
+        else if (cmd == "Exit")
+        {
+            msg = "Goodbye!\n";
+            send(client_fd, msg.c_str(), msg.size(), 0);
+            close(client_fd);
+            break;
+        }
         else
         {
             msg = "Invalid command\n";

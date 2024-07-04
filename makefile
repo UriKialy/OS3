@@ -19,8 +19,3 @@ clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done
-
-# Target to run programs in the "q1" subdirectory
-run-q1:
-	@echo "Running programs in directory q1"
-	@$(MAKE) -C q1/

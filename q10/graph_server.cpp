@@ -205,7 +205,12 @@ void* handle_client_proactor(int client_fd) {
             Removeedge(u, v);
             msg = "Edge " + to_string(u) + " " + to_string(v) + " removed.\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
-        } else {
+        }
+        else if (cmd == "Exit"){
+            close(client_fd);
+            cout << "client : "<< client_fd<<" disconected "<< endl;
+        }
+         else {
             msg = "Invalid command\n";
             send(client_fd, msg.c_str(), msg.size(), 0);
         }
